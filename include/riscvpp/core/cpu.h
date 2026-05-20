@@ -6,7 +6,7 @@
 #define RISCVPP_CPU_H
 
 namespace riscvpp {
-    class cpu {
+    class Cpu {
     };
 } // riscvpp
 
