@@ -2,7 +2,6 @@
 riscvpp is a RISC-V interpreter written in C++.
 * No third party libraries
 * Cross-platform
-* No code or text from artificial intelligence
 
 ## Roadmap <i>(not in order)</i>
 * Support for labels and directives (the most important one being .data and .text)
