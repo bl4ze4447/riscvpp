@@ -3,6 +3,9 @@ riscvpp is a RISC-V interpreter written in C++.
 * No third party libraries
 * Cross-platform
 
+# Testing
+Using CTest.
+
 ## Roadmap <i>(not in order)</i>
 * Support for labels and directives (the most important one being .data and .text)
     * One idea would be to parse the entire assembly file and build the .data and labels, and after that go line by line.
