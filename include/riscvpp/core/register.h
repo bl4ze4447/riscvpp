@@ -8,6 +8,7 @@
 #include <string_view>
 #include <array>
 #include <cstdint>
+#include <stdexcept>
 
 namespace riscvpp {
 
