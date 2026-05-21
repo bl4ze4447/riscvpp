@@ -10,6 +10,10 @@ env:
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
   BUILD_TYPE: Release
 
+permissions:
+  contents: read
+  actions: write # Needed so the workflow has permission to save the ccache data back to your repo
+
 jobs:
   build-and-test:
     name: ${{ matrix.os }}
@@ -24,9 +28,19 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Setup Ccache
+        uses: hendrikmuhs/ccache-action@v1
+        with:
+          key: ${{ matrix.os }}-${{ env.BUILD_TYPE }}
+          max-size: "500M"
+
       - name: Configure CMake
-        # Configure CMake in a 'build' subdirectory.
-        run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+        # Configure CMake in a 'build' subdirectory with ccache enabled.
+        run: >
+          cmake -B ${{github.workspace}}/build 
+          -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+          -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+          -DCMAKE_C_COMPILER_LAUNCHER=ccache
 
       - name: Build
         # Build your program with the given configuration
