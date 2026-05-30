@@ -6,13 +6,20 @@
 #include <iostream>
 #include <string_view>
 #include <stdexcept>
+#include <vector>
+#include <sstream>
+
+std::vector<std::string> failure_logs;
 
 template <typename T>
 bool assert_equal(const T& actual, const T& expected, const std::string_view test_name) {
     if (actual != expected) {
-        std::cerr << "[FAIL] " << test_name << "\n"
-                  << "Expected: " << expected << "\n"
-                  << "Actual:   " << actual << "\n\n";
+        std::ostringstream oss;
+        oss << "[FAIL] " << test_name << "\n"
+            << "Expected: " << expected << "\n"
+            << "Actual:   " << actual << "\n";
+
+        failure_logs.push_back(oss.str());
         return false;
     }
 
@@ -20,25 +27,25 @@ bool assert_equal(const T& actual, const T& expected, const std::string_view tes
     return true;
 }
 
-// Verifies that both x0 and standard registers start cleared to zero on initialization
+// Verifies x0 and standard registers are zero-initialized
 void test_initial_state(const riscvpp::Registers<int>& regs, bool& all_passed) {
     all_passed &= assert_equal(regs[0], 0, "x0 initialized to zero");
     all_passed &= assert_equal(regs[5], 0, "x5 initialized to zero");
 }
 
-// Verifies that a normal general-purpose register successfully retains written values
+// Verifies a standard register retains written values
 void test_standard_read_write(riscvpp::Registers<int>& regs, const riscvpp::Registers<int>& regs_view, bool& all_passed) {
     regs[5].set(0xABCDE);
     all_passed &= assert_equal(regs_view[5], 0xABCDE, "Standard write and read on x5");
 }
 
-// Verifies that writes to x0 are safely discarded by the proxy and always evaluate to zero
+// Verifies writes to x0 are discarded and always return zero
 void test_x0_immutable_constraint(riscvpp::Registers<int>& regs, const riscvpp::Registers<int>& regs_view, bool& all_passed) {
     regs[0].set(999);
     all_passed &= assert_equal(regs_view[0], 0, "Hardwired x0 discards writes");
 }
 
-// Verifies that distinct memory cells don't spill modifications over to neighboring indices
+// Verifies registers do not overwrite neighboring indices
 void test_register_isolation(riscvpp::Registers<int>& regs, const riscvpp::Registers<int>& regs_view, bool& all_passed) {
     regs[6].set(42);
     regs[7].set(84);
@@ -46,7 +53,7 @@ void test_register_isolation(riscvpp::Registers<int>& regs, const riscvpp::Regis
     all_passed &= assert_equal(regs_view[7], 84, "Register x7 is isolated");
 }
 
-// Verifies that sequential writes to the x0 proxy do not store or accumulate residual dirty states
+// Verifies consecutive writes to x0 do not store residual state
 void test_x0_consecutive_writes(riscvpp::Registers<int>& regs, const riscvpp::Registers<int>& regs_view, bool& all_passed) {
     regs[0].set(111);
     regs[0].set(222);
@@ -54,7 +61,7 @@ void test_x0_consecutive_writes(riscvpp::Registers<int>& regs, const riscvpp::Re
     all_passed &= assert_equal(regs_view[0], 0, "Hardwired x0 remains zero after consecutive writes");
 }
 
-// Verifies that array-bound safety policies cleanly abort execution upon malicious out-of-bounds indexing
+// Verifies out-of-bounds indexing throws std::out_of_range
 void test_out_of_bounds_protection(riscvpp::Registers<int>& regs, const riscvpp::Registers<int>& regs_view, bool& all_passed) {
     bool threw_on_write = false;
     bool threw_on_read = false;
@@ -76,7 +83,7 @@ void test_out_of_bounds_protection(riscvpp::Registers<int>& regs, const riscvpp:
 }
 
 int main() {
-    std::cout << "Running Register Tests...\n";
+    std::cout << "Running Register Tests...\n\n";
     bool all_passed = true;
 
     riscvpp::Registers<int> regs;
@@ -89,7 +96,14 @@ int main() {
     test_x0_consecutive_writes(regs, regs_view, all_passed);
     test_out_of_bounds_protection(regs, regs_view, all_passed);
 
-    if (!all_passed) {
+    std::cout << std::endl;
+
+    if (!failure_logs.empty()) {
+        std::cerr << "--- TEST SUITE FAILURES ---\n";
+        for (const auto& log : failure_logs) {
+            std::cerr << log << "\n";
+        }
+        std::cout << "Result: One or more tests in this suite FAILED.\n\n";
         return 1;
     }
 
